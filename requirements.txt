@@ -1,0 +1,9 @@
+SimpleITK
+numpy
+matplotlib
+jupyter
+requests
+tqdm
+scikit-image
+nibabel
+flask
