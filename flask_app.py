@@ -15,15 +15,28 @@ api = Flask(__name__)
 
 @api.route("/files", methods=["GET"])
 def list_files():
+    """
+
+    :return:
+    """
     files = gen.read_listdir(UPLOAD_DIRECTORY)
     return jsonify(list(files))
 
 @api.route("/files/<path:path>", methods=["GET"])
 def get_file(path):
+    """
+
+    :param path:
+    :return:
+    """
     return send_from_directory(UPLOAD_DIRECTORY, path, as_attachment=True)
 
 @api.route("/files/registration", methods=["POST"])
 def post_file():
+    """
+
+    :return:
+    """
     if "cut1" not in request.files or "cut2" not in request.files:
         response = {
             "status": 400,
