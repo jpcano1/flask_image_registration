@@ -5,6 +5,7 @@ import utils.general as gen
 from skimage import io
 
 import image_registration
+import cv2
 
 UPLOAD_DIRECTORY = os.path.join("static", "images")
 
