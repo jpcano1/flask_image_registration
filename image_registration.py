@@ -23,6 +23,11 @@ import matplotlib.pyplot as plt
 # img0 = dwi_img[..., 24]
 # img1 = t2_img[..., 19]
 
+def command_iteration(method: sitk.ImageRegistrationMethod):
+    print(f"{method.GetOptimizerIteration()} = \
+    {method.GetMetricValue()} : \
+    {method.GetOptimizerPosition()}")
+
 def resampler_method(fixed, moving, transform):
     resampler = sitk.ResampleImageFilter()
     resampler.SetReferenceImage(fixed)
@@ -56,7 +61,7 @@ def registration_1(img0, img1):
     initial_transform = sitk.CenteredTransformInitializer(
         fixed, moving, sitk.Similarity2DTransform()
     )
-    R.SetInitialTransform(initial_transform)
+    R.SetInitialTransform(initial_transform, inPlace=False)
 
     # We set the similarity metric
     # Uses the mutual information between two images
@@ -66,13 +71,151 @@ def registration_1(img0, img1):
     # We set the optimizer
     R.SetOptimizerAsGradientDescent(
         learningRate=0.5, 
-        numberOfIterations=1000
+        numberOfIterations=1000,
+        convergenceMinimumValue=1e-6,
+        convergenceWindowSize=10
     )
+
+    R.AddCommand(sitk.sitkIterationEvent, lambda: command_iteration(R))
 
     # We set the interpolator
     R.SetInterpolator(sitk.sitkLinear)
 
     # We Excute the method
+    final_transform = R.Execute(fixed, moving)
+
+    cimg_array = resampler_method(fixed, moving, final_transform)
+
+    return cimg_array
+
+def registration_2(img0, img1):
+    pixelType = sitk.sitkFloat32
+    fixed = sitk.Cast(sitk.GetImageFromArray(img0), pixelType)
+    moving = sitk.Cast(sitk.GetImageFromArray(img1), pixelType)
+
+    R = sitk.ImageRegistrationMethod()
+    R.SetMetricAsMeanSquares()
+    R.SetOptimizerAsRegularStepGradientDescent(
+        minStep=1e-4, numberOfIterations=1000,
+        relaxationFactor=0.5, learningRate=2.0,
+        gradientMagnitudeTolerance=1e-8
+    )
+
+    R.SetInitialTransform(sitk.TranslationTransform(fixed.GetDimension()))
+    R.SetInterpolator(sitk.sitkLinear)
+
+    R.AddCommand(sitk.sitkIterationEvent, lambda: command_iteration(R))
+
+    final_transform = R.Execute(fixed, moving)
+
+    cimg_array = resampler_method(fixed, moving, final_transform)
+
+    return cimg_array
+
+def registration_3(img0, img1):
+    pixelType = sitk.sitkFloat32
+    fixed = sitk.Cast(sitk.GetImageFromArray(img0), pixelType)
+    moving = sitk.Cast(sitk.GetImageFromArray(img1), pixelType)
+
+    R = sitk.ImageRegistrationMethod()
+    R.SetMetricAsJointHistogramMutualInformation()
+
+    R.SetOptimizerAsGradientDescentLineSearch(
+        learningRate=1.0,
+        numberOfIterations=1000,
+        convergenceMinimumValue=1e-6,
+        convergenceWindowSize=5
+    )
+
+    R.SetInitialTransform(sitk.TranslationTransform(fixed.GetDimension()))
+    R.SetInterpolator(sitk.sitkLinear)
+
+    R.AddCommand(sitk.sitkIterationEvent, lambda: command_iteration(R))
+    final_transform = R.Execute(fixed, moving)
+
+    cimg_array = resampler_method(fixed, moving, final_transform)
+
+    return cimg_array
+
+def registration_4(img0, img1):
+    pixelType = sitk.sitkFloat32
+    fixed = sitk.Cast(sitk.GetImageFromArray(img0), pixelType)
+    moving = sitk.Cast(sitk.GetImageFromArray(img1), pixelType)
+
+    R = sitk.ImageRegistrationMethod()
+    R.SetMetricAsCorrelation()
+    R.SetOptimizerAsRegularStepGradientDescent(
+        minStep=1e-4, numberOfIterations=500,
+        relaxationFactor=0.5, learningRate=2.0,
+        gradientMagnitudeTolerance=1e-8
+    )
+    R.SetOptimizerScalesFromIndexShift()
+
+    initial_transform = sitk.CenteredTransformInitializer(
+        fixed, moving, sitk.Similarity2DTransform()
+    )
+    R.SetInitialTransform(initial_transform)
+    R.SetInterpolator(sitk.sitkLinear)
+
+    R.AddCommand(sitk.sitkIterationEvent, lambda: command_iteration(R))
+
+    final_transform = R.Execute(fixed, moving)
+
+    cimg_array = resampler_method(fixed, moving, final_transform)
+
+    return cimg_array
+
+def registration_5(img0, img1):
+    pixelType = sitk.sitkFloat32
+    fixed = sitk.Cast(sitk.GetImageFromArray(img0), pixelType)
+    moving = sitk.Cast(sitk.GetImageFromArray(img1), pixelType)
+
+    numberOfBins = 24
+    samplingPercentage = 0.1
+
+    R = sitk.ImageRegistrationMethod()
+    R.SetMetricAsMattesMutualInformation(numberOfBins)
+    R.SetMetricSamplingPercentage(samplingPercentage, sitk.sitkWallClock)
+    R.SetMetricSamplingStrategy(R.RANDOM)
+    R.SetOptimizerAsRegularStepGradientDescent(
+        minStep=1e-4, numberOfIterations=500,
+        relaxationFactor=0.5, learningRate=2.0,
+        gradientMagnitudeTolerance=1e-8
+    )
+
+    R.SetInitialTransform(sitk.TranslationTransform(fixed.GetDimension()))
+    R.SetInterpolator(sitk.sitkLinear)
+
+    R.AddCommand(sitk.sitkIterationEvent, lambda: command_iteration(R))
+
+    final_transform = R.Execute(fixed, moving)
+
+    cimg_array = resampler_method(fixed, moving, final_transform)
+
+    return cimg_array
+
+def registration_6(img0, img1):
+    pixelType = sitk.sitkFloat32
+    fixed = sitk.Cast(sitk.GetImageFromArray(img0), pixelType)
+    moving = sitk.Cast(sitk.GetImageFromArray(img1), pixelType)
+
+    transform_domain_mesh_size = [8] * moving.GetDimension()
+    initial_transform = sitk.BSplineTransformInitializer(fixed,
+                                                         transform_domain_mesh_size)
+
+    R = sitk.ImageRegistrationMethod()
+    R.SetMetricAsCorrelation()
+
+    R.SetOptimizerAsLBFGSB(gradientConvergenceTolerance=1e-5,
+                           numberOfIterations=500,
+                           maximumNumberOfCorrections=5,
+                           maximumNumberOfFunctionEvaluations=1000,
+                           costFunctionConvergenceFactor=1e7)
+
+    R.SetInitialTransform(initial_transform, True)
+    R.SetInterpolator(sitk.sitkLinear)
+    R.AddCommand(sitk.sitkIterationEvent, lambda: command_iteration(R))
+
     final_transform = R.Execute(fixed, moving)
 
     cimg_array = resampler_method(fixed, moving, final_transform)

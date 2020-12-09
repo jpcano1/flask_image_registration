@@ -51,7 +51,8 @@ def post_file():
 
     cut1 = io.imread(os.path.join(UPLOAD_DIRECTORY, "cut1.png"))
     cut2 = io.imread(os.path.join(UPLOAD_DIRECTORY, "cut2.png"))
-    cimg_array = image_registration.registration_1(cut1, cut2)
+    # El mejor es registo_4
+    cimg_array = image_registration.registration_4(cut1, cut2)
     io.imsave(os.path.join(UPLOAD_DIRECTORY, "registered.png"),
               cimg_array)
     return send_from_directory(UPLOAD_DIRECTORY,

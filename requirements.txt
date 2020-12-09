@@ -1,5 +1,4 @@
 SimpleITK
-SimpleElastix
 numpy
 matplotlib
 jupyter
