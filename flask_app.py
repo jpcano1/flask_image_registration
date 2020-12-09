@@ -44,6 +44,7 @@ def post_file():
             "message": "Faltan archivos o no se enviaron"
         }
         return jsonify(response), 400
+    method = int(request.args.get("method")) or 1
     cut1 = request.files["cut1"]
     cut2 = request.files["cut2"]
     cut1.save(os.path.join(UPLOAD_DIRECTORY, "cut1.png"))
@@ -52,7 +53,7 @@ def post_file():
     cut1 = io.imread(os.path.join(UPLOAD_DIRECTORY, "cut1.png"))
     cut2 = io.imread(os.path.join(UPLOAD_DIRECTORY, "cut2.png"))
     # El mejor es registo_4
-    cimg_array = image_registration.registration_4(cut1, cut2)
+    cimg_array = image_registration.registration_methods[method - 1](cut1, cut2)
     io.imsave(os.path.join(UPLOAD_DIRECTORY, "registered.png"),
               cimg_array)
     return send_from_directory(UPLOAD_DIRECTORY,

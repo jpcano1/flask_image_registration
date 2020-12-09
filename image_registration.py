@@ -23,8 +23,9 @@ import matplotlib.pyplot as plt
 # img0 = dwi_img[..., 24]
 # img1 = t2_img[..., 19]
 
-def command_iteration(method: sitk.ImageRegistrationMethod):
-    print(f"{method.GetOptimizerIteration()} = \
+def command_iteration(method: sitk.ImageRegistrationMethod, print_log=False):
+    if print_log:
+        print(f"{method.GetOptimizerIteration()} = \
     {method.GetMetricValue()} : \
     {method.GetOptimizerPosition()}")
 
@@ -221,6 +222,76 @@ def registration_6(img0, img1):
     cimg_array = resampler_method(fixed, moving, final_transform)
 
     return cimg_array
+
+def registration_7(img0, img1):
+    pixelType = sitk.sitkFloat32
+    fixed = sitk.Cast(sitk.GetImageFromArray(img0), pixelType)
+    moving = sitk.Cast(sitk.GetImageFromArray(img1), pixelType)
+
+    transform_domain_mesh_size = [10] * moving.GetDimension()
+    initial_transform = sitk.BSplineTransformInitializer(fixed,
+                                          transform_domain_mesh_size)
+
+    R = sitk.ImageRegistrationMethod()
+    R.SetMetricAsMattesMutualInformation()
+
+    R.SetOptimizerAsGradientDescentLineSearch(
+        learningRate=0.5,
+        numberOfIterations=1000,
+        convergenceMinimumValue=1e-6,
+        convergenceWindowSize=5
+    )
+
+    R.SetOptimizerScalesFromPhysicalShift()
+    R.SetInitialTransform(initial_transform)
+    R.SetInterpolator(sitk.sitkLinear)
+
+    R.SetShrinkFactorsPerLevel([6, 2, 1])
+    R.SetSmoothingSigmasPerLevel([6, 2, 1])
+    R.AddCommand(sitk.sitkIterationEvent, lambda: command_iteration(R))
+
+    final_transform = R.Execute(fixed, moving)
+
+    cimg_array = resampler_method(fixed, moving, final_transform)
+
+    return cimg_array
+
+def registration_8(img0, img1):
+    pixelType = sitk.sitkFloat32
+    fixed = sitk.Cast(sitk.GetImageFromArray(img0), pixelType)
+    moving = sitk.Cast(sitk.GetImageFromArray(img1), pixelType)
+
+    R = sitk.ImageRegistrationMethod()
+    R.SetMetricAsMattesMutualInformation()
+
+    sample_per_axis = 12
+    initial_transform = sitk.Euler2DTransform()
+
+    R.SetOptimizerAsExhaustive([sample_per_axis // 2, 0, 0])
+    R.SetOptimizerScales([2. * np.pi / sample_per_axis, 1., 1.])
+
+    initial_transform = sitk.CenteredTransformInitializer(fixed,
+                                                          moving, initial_transform)
+    R.SetInitialTransform(initial_transform)
+    R.SetInterpolator(sitk.sitkLinear)
+
+    R.AddCommand(sitk.sitkIterationEvent, lambda: command_iteration(R))
+    final_transform = R.Execute(fixed, moving)
+
+    cimg_array = resampler_method(fixed, moving, final_transform)
+
+    return cimg_array
+
+registration_methods = [
+    registration_1,
+    registration_2,
+    registration_3,
+    registration_4,
+    registration_5,
+    registration_6,
+    registration_7,
+    registration_8
+]
 
 # cimg_array = registration_1(img0, img1)
 #
